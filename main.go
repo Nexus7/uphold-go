@@ -19,7 +19,7 @@ type BalanceDataResponse struct {
 }
 
 // Retrieve Balance data from Alephium API
-func retrieveBalanceData(acct string) {
+func retrieveBalanceData(acct string) (float64, error) {
 	// Get the Alephium Mainnet URL from the environment variable
 	url := os.Getenv("ALEPHIUM_MAINNET_URL") + acct + "/balance"
 	method := "GET"
@@ -30,41 +30,38 @@ func retrieveBalanceData(acct string) {
 
 	// Check for errors
 	if err != nil {
-		fmt.Println(err)
-		return
+		return 0, err
 	}
 
 	// Send the request
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return 0, err
 	}
 	defer res.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return 0, err
 	}
 
 	// Unmarshal the JSON response
 	var r = new(BalanceDataResponse)
-	err2 := json.Unmarshal(body, &r)
-	if err2 != nil {
-		log.Fatal(err2)
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return 0, err
 	}
 
 	// Convert the balance to a float
 	balance, err := strconv.ParseFloat(r.Balance, 64)
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
-	// Convert the balance to Alephium and print it
+	// Convert the balance to Alephium
 	balance /= 1e18
-	fmt.Println("Balance: ", balance)
+	return balance, nil
 }
 
 func main() {
@@ -83,5 +80,6 @@ func main() {
 	acct := os.Args[1]
 
 	// Retrieve the balance data
-	retrieveBalanceData(acct)
+	balance, err := retrieveBalanceData(acct)
+	fmt.Println("Balance: ", balance)
 }
